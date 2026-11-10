@@ -23,13 +23,14 @@ public:
         g.drawRoundedRectangle (bounds, 8.0f, 2.0f);
 
         g.setColour (juce::Colours::white);
-        g.setFont (juce::Font (16.0f, juce::Font::bold));
+        // FIX C4996: use juce::FontOptions instead of deprecated Font(float, int).
+        g.setFont (juce::Font (juce::FontOptions (16.0f).withStyle ("Bold")));
         g.drawText ("DRAG MIDI TO DAW",
                     getLocalBounds().removeFromTop (getHeight() / 2),
                     juce::Justification::centred);
 
         g.setColour (juce::Colours::lightgrey);
-        g.setFont (12.0f);
+        g.setFont (juce::Font (juce::FontOptions (12.0f)));
         g.drawText ("Click + drag onto FL Studio piano roll",
                     getLocalBounds().removeFromBottom (getHeight() / 2),
                     juce::Justification::centred);
