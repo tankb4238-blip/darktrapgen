@@ -1,0 +1,35 @@
+name: Build JUCE VST3
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download JUCE
+        run: |
+          Invoke-WebRequest -Uri "https://github.com" -OutFile "juce.zip"
+          Expand-Archive -Path "juce.zip" -DestinationPath "C:\JUCE"
+
+      - name: Generate Visual Studio Project via Projucer
+        run: |
+          & "C:\JUCE\JUCE\Projucer.exe" --resave "NewProject.jucer"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build VST3 Plugin
+        run: |
+          msbuild "Builds\VisualStudio2026\NewProject.sln" /p:Configuration=Release /p:Platform=x64
+
+      - name: Upload Compiled VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: DarkTrapGen-VST3
+          path: Builds\VisualStudio2026\x64\Release\VST3\**
