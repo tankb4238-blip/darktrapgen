@@ -30,7 +30,6 @@ void MidiDragBox::mouseDrag (const juce::MouseEvent&)
     }
 }
 
-//==============================================================================
 void XYExperimentPad::update (juce::Point<float> pos)
 {
     thumbX = juce::jlimit (0.0f, 1.0f, pos.x / (float) getWidth());
@@ -67,7 +66,6 @@ void XYExperimentPad::paint (juce::Graphics& g)
     g.drawText ("LAYER BLEND", getLocalBounds().reduced (6), juce::Justification::bottomLeft);
 }
 
-//==============================================================================
 void PianoRollViewer::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds().toFloat();
@@ -128,7 +126,6 @@ void PianoRollViewer::paint (juce::Graphics& g)
     draw (v.melodySeq, juce::Colour (0xffe74c3c));
 }
 
-//==============================================================================
 LayerRow::LayerRow (DarkTrapAudioProcessor& p, int i) : processorRef (p), index (i)
 {
     addAndMakeVisible (presetBox);
@@ -212,7 +209,6 @@ void LayerRow::openFileLoader()
         });
 }
 
-//==============================================================================
 DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
