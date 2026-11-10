@@ -6,7 +6,6 @@ DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcess
       processorRef (p),
       midiDragBox (p)
 {
-    //==========================================================================
     addAndMakeVisible (generateButton);
     generateButton.onClick = [this] { processorRef.generateMelody(); };
 
@@ -46,7 +45,6 @@ DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcess
     halfTimeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
         processorRef.apvts, "halfTime", halfTimeButton);
 
-    //==========================================================================
     configureSlider (cutoffSlider,  cutoffLabel,  "cutoff",  "Cutoff");
     configureSlider (attackSlider,  attackLabel,  "attack",  "Attack");
     configureSlider (decaySlider,   decayLabel,   "decay",   "Decay");
@@ -61,7 +59,6 @@ DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcess
     setSize (820, 480);
 }
 
-//==============================================================================
 void DarkTrapAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff101010));
@@ -122,7 +119,6 @@ void DarkTrapAudioProcessorEditor::resized()
     place (releaseSlider, releaseLabel);
 }
 
-//==============================================================================
 void DarkTrapAudioProcessorEditor::configureSlider (juce::Slider& slider,
                                                     juce::Label& label,
                                                     const juce::String& paramID,
