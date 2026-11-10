@@ -11,63 +11,61 @@ public:
     {
         setMouseCursor (juce::MouseCursor::DraggingHandCursor);
     }
-
-    void paint (juce::Graphics& g) override
-    {
-        const auto bounds = getLocalBounds().toFloat().reduced (1.0f);
-
-        g.setColour (juce::Colour (0xff1d1d1d));
-        g.fillRoundedRectangle (bounds, 8.0f);
-
-        g.setColour (juce::Colour (0xff9b59b6));
-        g.drawRoundedRectangle (bounds, 8.0f, 2.0f);
-
-        g.setColour (juce::Colours::white);
-        // FIX C4996: use juce::FontOptions instead of deprecated Font(float, int).
-        g.setFont (juce::Font (juce::FontOptions (16.0f).withStyle ("Bold")));
-        g.drawText ("DRAG MIDI TO DAW",
-                    getLocalBounds().removeFromTop (getHeight() / 2),
-                    juce::Justification::centred);
-
-        g.setColour (juce::Colours::lightgrey);
-        g.setFont (juce::Font (juce::FontOptions (12.0f)));
-        g.drawText ("Click + drag onto FL Studio piano roll",
-                    getLocalBounds().removeFromBottom (getHeight() / 2),
-                    juce::Justification::centred);
-    }
-
-    void mouseDown (const juce::MouseEvent&) override
-    {
-        dragging = false;
-    }
-
-    void mouseDrag (const juce::MouseEvent&) override
-    {
-        if (dragging)
-            return;
-
-        dragging = true;
-
-        const auto midiFile = processorRef.getGeneratedMidiFile();
-
-        if (midiFile.existsAsFile())
-        {
-            juce::StringArray files;
-            files.add (midiFile.getFullPathName());
-
-            juce::DragAndDropContainer::performExternalDragDropOfFiles (
-                files, true, this);
-        }
-    }
-
-    void mouseUp (const juce::MouseEvent&) override
-    {
-        dragging = false;
-    }
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override { dragging = false; }
+    void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override { dragging = false; }
 
 private:
     DarkTrapAudioProcessor& processorRef;
     bool dragging = false;
+};
+
+//==============================================================================
+class XYExperimentPad final : public juce::Component
+{
+public:
+    explicit XYExperimentPad (DarkTrapAudioProcessor& p) : processorRef (p) {}
+    void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent& e) override { update (e.position); }
+    void mouseDrag (const juce::MouseEvent& e) override { update (e.position); }
+
+private:
+    void update (juce::Point<float>);
+    DarkTrapAudioProcessor& processorRef;
+    float thumbX = 0.7f, thumbY = 0.5f;
+};
+
+//==============================================================================
+class PianoRollViewer final : public juce::Component
+{
+public:
+    explicit PianoRollViewer (DarkTrapAudioProcessor& p) : processorRef (p) {}
+    void paint (juce::Graphics&) override;
+
+private:
+    DarkTrapAudioProcessor& processorRef;
+};
+
+//==============================================================================
+class LayerRow final : public juce::Component
+{
+public:
+    LayerRow (DarkTrapAudioProcessor& p, int layerIndex);
+    void paint (juce::Graphics&) override;
+    void resized() override;
+
+private:
+    void openFileLoader();
+
+    DarkTrapAudioProcessor& processorRef;
+    int index;
+    juce::ComboBox presetBox;
+    juce::TextButton loadFileButton { "LOAD SF2/WAV" };
+    juce::Label nameLabel;
+    juce::Slider volumeSlider;
+    juce::TextButton muteButton { "M" };
+    std::unique_ptr<juce::FileChooser> fileChooser;
 };
 
 //==============================================================================
@@ -80,36 +78,33 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
     DarkTrapAudioProcessor& processorRef;
 
     juce::TextButton generateButton { "GENERATE" };
-    juce::ComboBox presetBox;
-    juce::TextButton loadSoundButton { "LOAD SF2 / SFZ / WAV" };
-    juce::ToggleButton halfTimeButton { "Half-Time" };
+    juce::ComboBox keyBox, moodBox, genreBox;
+    juce::TextButton exportAudioButton { "EXPORT .WAV" };
+    juce::TextButton exportStemsButton { "EXPORT STEMS" };
 
-    MidiDragBox midiDragBox;
+    std::array<std::unique_ptr<LayerRow>, 3> layerRows;
+    std::array<juce::TextButton, 8> variationButtons;
 
-    juce::Slider cutoffSlider, attackSlider, decaySlider, sustainSlider,
-                 releaseSlider, reverbSlider, delaySlider, wobbleSlider;
+    XYExperimentPad xyPad { processorRef };
+    PianoRollViewer pianoRoll { processorRef };
+    MidiDragBox midiDragBox { processorRef };
 
-    juce::Label cutoffLabel, attackLabel, decayLabel, sustainLabel,
-                releaseLabel, reverbLabel, delayLabel, wobbleLabel;
-
-    std::unique_ptr<juce::FileChooser> fileChooser;
+    juce::Slider cutoffKnob, reverbKnob, delayKnob, chorusKnob,
+                 distortionKnob, flangerKnob, attackKnob, releaseKnob;
+    juce::ToggleButton halfSpeedButton { "Half-Speed" };
 
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> halfTimeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> halfSpeedAttachment;
 
-    void configureSlider (juce::Slider& slider,
-                          juce::Label& label,
-                          const juce::String& paramID,
-                          const juce::String& labelText);
+    std::unique_ptr<juce::FileChooser> audioChooser, stemsChooser;
 
-    void positionSlider (juce::Slider& slider,
-                         juce::Label& label,
-                         int x, int y, int w, int h);
+    void configureKnob (juce::Slider& s, const juce::String& id);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DarkTrapAudioProcessorEditor)
 };
