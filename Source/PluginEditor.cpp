@@ -1,6 +1,5 @@
 #include "PluginEditor.h"
 
-//==============================================================================
 void MidiDragBox::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds().toFloat().reduced (1.0f);
@@ -8,7 +7,8 @@ void MidiDragBox::paint (juce::Graphics& g)
     g.setColour (juce::Colour (0xff9b59b6)); g.drawRoundedRectangle (b, 8.0f, 2.0f);
     g.setColour (juce::Colours::white);
     g.setFont (juce::Font (juce::FontOptions (14.0f).withStyle ("Bold")));
-    g.drawText ("DRAG MIDI TO DAW", getLocalBounds().removeFromTop (getHeight() / 2),
+    g.drawText ("DRAG MIDI TO DAW",
+                getLocalBounds().removeFromTop (getHeight() / 2),
                 juce::Justification::centred);
     g.setColour (juce::Colours::lightgrey);
     g.setFont (juce::Font (juce::FontOptions (11.0f)));
@@ -21,11 +21,11 @@ void MidiDragBox::mouseDrag (const juce::MouseEvent&)
 {
     if (dragging) return;
     dragging = true;
-    const auto midiFile = processorRef.getVariationMidiFile (processorRef.getActiveVariation());
-    if (midiFile.existsAsFile())
+    const auto file = processorRef.getVariationMidiFile (processorRef.getActiveVariation());
+    if (file.existsAsFile())
     {
         juce::StringArray files;
-        files.add (midiFile.getFullPathName());
+        files.add (file.getFullPathName());
         juce::DragAndDropContainer::performExternalDragDropOfFiles (files, true, this);
     }
 }
@@ -43,7 +43,8 @@ void XYExperimentPad::paint (juce::Graphics& g)
 {
     auto b = getLocalBounds().toFloat().reduced (2.0f);
     juce::ColourGradient grad (juce::Colour (0xff0a0512), 0, 0,
-                                juce::Colour (0xff1a0a2e), (float) getWidth(), (float) getHeight(), false);
+                                juce::Colour (0xff1a0a2e),
+                                (float) getWidth(), (float) getHeight(), false);
     g.setGradientFill (grad); g.fillRoundedRectangle (b, 8.0f);
     g.setColour (juce::Colour (0x30ffffff));
     for (int i = 1; i < 4; ++i)
@@ -53,16 +54,16 @@ void XYExperimentPad::paint (juce::Graphics& g)
         const float y = b.getY() + b.getHeight() * (float) i / 4.0f;
         g.drawLine (b.getX(), y, b.getRight(), y, 1.0f);
     }
-    const auto thumb = juce::Point<float> (b.getX() + thumbX * b.getWidth(),
-                                            b.getY() + thumbY * b.getHeight());
+    const auto t = juce::Point<float> (b.getX() + thumbX * b.getWidth(),
+                                        b.getY() + thumbY * b.getHeight());
     g.setColour (juce::Colour (0xffe74c3c));
-    g.fillEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (thumb));
+    g.fillEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (t));
     g.setColour (juce::Colours::white);
-    g.drawEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (thumb), 2.0f);
+    g.drawEllipse (juce::Rectangle<float> (18.0f, 18.0f).withCentre (t), 2.0f);
     g.setColour (juce::Colours::white.withAlpha (0.6f));
     g.setFont (juce::Font (juce::FontOptions (10.0f)));
-    auto t = getLocalBounds().reduced (6);
-    g.drawText ("CUTOFF \xe2\x86\x92", t.removeFromTop (14), juce::Justification::centredRight);
+    auto ta = getLocalBounds().reduced (6);
+    g.drawText ("CUTOFF \xe2\x86\x92", ta.removeFromTop (14), juce::Justification::centredRight);
     g.drawText ("LAYER BLEND", getLocalBounds().reduced (6), juce::Justification::bottomLeft);
 }
 
@@ -90,13 +91,15 @@ void PianoRollViewer::paint (juce::Graphics& g)
             if (ev && ev->message.isNoteOn())
             {
                 int n = ev->message.getNoteNumber();
-                if (n < lo) lo = n; if (n > hi) hi = n;
+                if (n < lo) lo = n;
+                if (n > hi) hi = n;
             }
         }
     };
     scan (v.melodySeq); scan (v.chordSeq); scan (v.bassSeq);
     if (hi <= lo) { lo = 24; hi = 96; }
-    lo = juce::jmax (12, lo - 2); hi = juce::jmin (120, hi + 2);
+    lo = juce::jmax (12, lo - 2);
+    hi = juce::jmin (120, hi + 2);
 
     const float rowH = b.getHeight() / (float)(hi - lo + 1);
     const float total = (float)(v.bars * 4 * 960);
@@ -133,13 +136,16 @@ LayerRow::LayerRow (DarkTrapAudioProcessor& p, int i) : processorRef (p), index 
     for (int k = 0; k < n; ++k)
     {
         const auto& d = DarkTrapAudioProcessor::getDarkInstrument (k);
-        presetBox.addItem (juce::String (d.name) + "  [" + d.category + "]", k + 1);
+        presetBox.addItem (juce::String (d.name) + " [" + d.category + "]", k + 1);
     }
     presetBox.setSelectedId (processorRef.getLayer (index).presetIndex + 1, juce::dontSendNotification);
     presetBox.onChange = [this] {
         const int sel = presetBox.getSelectedId() - 1;
-        if (sel >= 0) processorRef.loadDarkInstrumentPreset (index, sel);
-        nameLabel.setText (processorRef.getLayer (index).sourceName, juce::dontSendNotification);
+        if (sel >= 0)
+        {
+            processorRef.loadDarkInstrumentPreset (index, sel);
+            nameLabel.setText (processorRef.getLayer (index).sourceName, juce::dontSendNotification);
+        }
     };
 
     addAndMakeVisible (loadFileButton);
@@ -167,30 +173,28 @@ LayerRow::LayerRow (DarkTrapAudioProcessor& p, int i) : processorRef (p), index 
 
 void LayerRow::paint (juce::Graphics& g)
 {
-    auto b = getLocalBounds().toFloat();
-    g.setColour (juce::Colour (0xff1a0a1a));
-    g.fillRoundedRectangle (b.reduced (2.0f), 5.0f);
-    g.setColour (juce::Colour (0xff3a1a3a));
-    g.drawRoundedRectangle (b.reduced (2.0f), 5.0f, 1.0f);
+    auto b = getLocalBounds().toFloat().reduced (2.0f);
+    g.setColour (juce::Colour (0xff1a0a1a)); g.fillRoundedRectangle (b, 5.0f);
+    g.setColour (juce::Colour (0xff3a1a3a)); g.drawRoundedRectangle (b, 5.0f, 1.0f);
 }
 
 void LayerRow::resized()
 {
-    auto area = getLocalBounds().reduced (6);
-    auto top = area.removeFromTop (20);
+    auto a = getLocalBounds().reduced (6);
+    auto top = a.removeFromTop (20);
     nameLabel.setBounds (top.removeFromLeft (150));
     muteButton.setBounds (top.removeFromRight (24));
-    auto row2 = area.removeFromTop (24);
-    presetBox.setBounds (row2.removeFromLeft (getWidth() - 100));
-    row2.removeFromLeft (4);
-    loadFileButton.setBounds (row2);
-    volumeSlider.setBounds (area.reduced (0, 4));
+    auto r2 = a.removeFromTop (24);
+    presetBox.setBounds (r2.removeFromLeft (getWidth() - 100));
+    r2.removeFromLeft (4);
+    loadFileButton.setBounds (r2);
+    volumeSlider.setBounds (a.reduced (0, 4));
 }
 
 void LayerRow::openFileLoader()
 {
     fileChooser = std::make_unique<juce::FileChooser> (
-        "Load SF2 / SFZ / WAV into layer " + juce::String (index + 1),
+        "Load into layer " + juce::String (index + 1),
         juce::File(), "*.sf2;*.sfz;*.wav");
     fileChooser->launchAsync (
         juce::FileBrowserComponent::openMode
@@ -234,7 +238,8 @@ DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcess
     exportAudioButton.onClick = [this] {
         audioChooser = std::make_unique<juce::FileChooser> ("Export audio",
             juce::File::getSpecialLocation (juce::File::userDesktopDirectory).getChildFile ("DarkTrap.wav"), "*.wav");
-        audioChooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,
+        audioChooser->launchAsync (juce::FileBrowserComponent::saveMode
+                                   | juce::FileBrowserComponent::warnAboutOverwriting,
             [this] (const juce::FileChooser& fc) {
                 const auto f = fc.getResult();
                 if (f != juce::File()) processorRef.exportAudioToFile (f.withFileExtension (".wav"));
@@ -245,14 +250,19 @@ DarkTrapAudioProcessorEditor::DarkTrapAudioProcessorEditor (DarkTrapAudioProcess
     exportStemsButton.onClick = [this] {
         stemsChooser = std::make_unique<juce::FileChooser> ("Export stems folder",
             juce::File::getSpecialLocation (juce::File::userDesktopDirectory).getChildFile ("DarkTrap_Stems"));
-        stemsChooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectDirectories,
+        stemsChooser->launchAsync (juce::FileBrowserComponent::saveMode
+                                   | juce::FileBrowserComponent::canSelectDirectories,
             [this] (const juce::FileChooser& fc) {
                 const auto f = fc.getResult();
                 if (f != juce::File()) { f.createDirectory(); processorRef.exportLayerStems (f); }
             });
     };
 
-    for (int i = 0; i < 3; ++i) { layerRows[(size_t) i] = std::make_unique<LayerRow> (processorRef, i); addAndMakeVisible (*layerRows[(size_t) i]); }
+    for (int i = 0; i < 3; ++i)
+    {
+        layerRows[(size_t) i] = std::make_unique<LayerRow> (processorRef, i);
+        addAndMakeVisible (*layerRows[(size_t) i]);
+    }
 
     for (int v = 0; v < 8; ++v)
     {
@@ -289,8 +299,9 @@ void DarkTrapAudioProcessorEditor::configureKnob (juce::Slider& s, const juce::S
     s.setRotaryParameters (juce::MathConstants<float>::pi * 1.15f,
                             juce::MathConstants<float>::pi * 2.85f, true);
     addAndMakeVisible (s);
-    sliderAttachments.push_back (std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-        processorRef.apvts, id, s));
+    sliderAttachments.push_back (
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+            processorRef.apvts, id, s));
 }
 
 void DarkTrapAudioProcessorEditor::paint (juce::Graphics& g)
@@ -320,13 +331,12 @@ void DarkTrapAudioProcessorEditor::resized()
     area.removeFromTop (8);
 
     auto mid = area.removeFromTop (320);
-
     auto layersCol = mid.removeFromLeft (380);
-    for (int i = 0; i < 3; ++i) layerRows[(size_t) i]->setBounds (layersCol.removeFromTop (100).reduced (0, 2));
+    for (int i = 0; i < 3; ++i)
+        layerRows[(size_t) i]->setBounds (layersCol.removeFromTop (100).reduced (0, 2));
 
     mid.removeFromLeft (8);
     auto rightCol = mid;
-
     auto padArea = rightCol.removeFromRight (220);
     xyPad.setBounds (padArea.removeFromTop (220));
     padArea.removeFromTop (8);
@@ -336,22 +346,22 @@ void DarkTrapAudioProcessorEditor::resized()
     area.removeFromTop (8);
 
     auto bottom = area.removeFromTop (100);
-    auto variationsArea = bottom.removeFromLeft (480);
-    for (int v = 0; v < 8; ++v) variationButtons[(size_t) v].setBounds (variationsArea.removeFromLeft (58).reduced (2));
+    auto vars = bottom.removeFromLeft (480);
+    for (int v = 0; v < 8; ++v)
+        variationButtons[(size_t) v].setBounds (vars.removeFromLeft (58).reduced (2));
 
     bottom.removeFromLeft (12);
-    auto fxArea = bottom;
-
+    auto fx = bottom;
     const int knobW = 72;
-    cutoffKnob.setBounds     (fxArea.removeFromLeft (knobW));
-    reverbKnob.setBounds     (fxArea.removeFromLeft (knobW));
-    delayKnob.setBounds      (fxArea.removeFromLeft (knobW));
-    chorusKnob.setBounds     (fxArea.removeFromLeft (knobW));
-    distortionKnob.setBounds (fxArea.removeFromLeft (knobW));
-    flangerKnob.setBounds    (fxArea.removeFromLeft (knobW));
-    attackKnob.setBounds     (fxArea.removeFromLeft (knobW));
-    releaseKnob.setBounds    (fxArea.removeFromLeft (knobW));
-    halfSpeedButton.setBounds (fxArea.removeFromLeft (100).reduced (0, 40));
+    cutoffKnob.setBounds     (fx.removeFromLeft (knobW));
+    reverbKnob.setBounds     (fx.removeFromLeft (knobW));
+    delayKnob.setBounds      (fx.removeFromLeft (knobW));
+    chorusKnob.setBounds     (fx.removeFromLeft (knobW));
+    distortionKnob.setBounds (fx.removeFromLeft (knobW));
+    flangerKnob.setBounds    (fx.removeFromLeft (knobW));
+    attackKnob.setBounds     (fx.removeFromLeft (knobW));
+    releaseKnob.setBounds    (fx.removeFromLeft (knobW));
+    halfSpeedButton.setBounds (fx.removeFromLeft (100).reduced (0, 40));
 }
 
 void DarkTrapAudioProcessorEditor::timerCallback()
