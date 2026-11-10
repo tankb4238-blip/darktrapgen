@@ -12,24 +12,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download JUCE
+      - name: Clone JUCE
         run: |
-          Invoke-WebRequest -Uri "https://github.com" -OutFile "juce.zip"
-          Expand-Archive -Path "juce.zip" -DestinationPath "C:\JUCE"
+          git clone --depth 1 https://github.com C:\JUCE
 
-      - name: Generate Visual Studio Project via Projucer
+      - name: Build Projucer
         run: |
-          & "C:\JUCE\JUCE\Projucer.exe" --resave "NewProject.jucer"
+          msbuild "C:\JUCE\extras\Projucer\Builds\VisualStudio2022\Projucer.sln" /p:Configuration=Release /p:Platform=x64
+
+      - name: Generate Visual Studio Project
+        run: |
+          & "C:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe" --resave "NewProject.jucer"
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Build VST3 Plugin
         run: |
-          msbuild "Builds\VisualStudio2026\NewProject.sln" /p:Configuration=Release /p:Platform=x64
+          $sln = Get-ChildItem -Path "Builds" -Filter "*.sln" -Recurse | Select-Object -First 1
+          msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64
 
       - name: Upload Compiled VST3
         uses: actions/upload-artifact@v4
         with:
           name: DarkTrapGen-VST3
-          path: Builds\VisualStudio2026\x64\Release\VST3\**
+          path: Builds\**\x64\Release\VST3\**
