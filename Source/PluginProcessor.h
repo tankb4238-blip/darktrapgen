@@ -49,7 +49,6 @@ public:
 class UniversalVoice final : public juce::SynthesiserVoice
 {
 public:
-    // FIX C2084: declaration only here; definition lives in the .cpp.
     explicit UniversalVoice (VoiceParams& paramsIn);
 
     bool canPlaySound (juce::SynthesiserSound* sound) override
