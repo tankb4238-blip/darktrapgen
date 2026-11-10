@@ -20,9 +20,7 @@ struct VoiceParams
 class UniversalSound final : public juce::SynthesiserSound
 {
 public:
-    explicit UniversalSound (const juce::String& nameIn = "Sound")
-        : soundName (nameIn) {}
-
+    explicit UniversalSound (const juce::String& nameIn = "Sound") : soundName (nameIn) {}
     bool appliesToNote (int n) override { return n >= lowNote && n <= highNote; }
     bool appliesToChannel (int) override { return true; }
 
@@ -37,7 +35,6 @@ public:
     float gain = 1.0f;
     float tuneCents = 0.0f;
 
-    // Modal synthesis config (used when isModal == true)
     int numPartials = 0;
     double partialRatios[8] {};
     double partialAmps[8] {};
@@ -45,7 +42,6 @@ public:
     float noiseAmount = 0.0f;
     float driveAmount = 0.0f;
 
-    // If true, use these instead of the global APVTS voice params.
     bool useCustomEnvelope = false;
     float presetAttack  = 0.01f;
     float presetDecay   = 0.20f;
@@ -60,40 +56,29 @@ class UniversalVoice final : public juce::SynthesiserVoice
 public:
     explicit UniversalVoice (VoiceParams& paramsIn);
 
-    bool canPlaySound (juce::SynthesiserSound* sound) override
-    {
-        return dynamic_cast<UniversalSound*> (sound) != nullptr;
-    }
+    bool canPlaySound (juce::SynthesiserSound* s) override
+    { return dynamic_cast<UniversalSound*> (s) != nullptr; }
 
-    void startNote (int midiNoteNumber, float velocity,
-                    juce::SynthesiserSound* sound,
-                    int currentPitchWheelPosition) override;
-    void stopNote (float velocity, bool allowTailOff) override;
-    void pitchWheelMoved (int newValue) override;
+    void startNote (int, float, juce::SynthesiserSound*, int) override;
+    void stopNote (float, bool) override;
+    void pitchWheelMoved (int) override;
     void controllerMoved (int, int) override {}
-    void renderNextBlock (juce::AudioBuffer<float>& outputBuffer,
-                          int startSample, int numSamples) override;
+    void renderNextBlock (juce::AudioBuffer<float>&, int, int) override;
 
 private:
     VoiceParams& params;
     UniversalSound* currentSound = nullptr;
     juce::ADSR adsr;
     juce::IIRFilter filterL, filterR;
-    double samplePos = 0.0;
-    double pitchRatio = 1.0;
-    double lastSampleRate = 0.0;
-    float velocityGain = 1.0f;
+    double samplePos = 0.0, pitchRatio = 1.0, lastSampleRate = 0.0;
+    float velocityGain = 1.0f, pitchWheelSemitones = 0.0f;
     int midiNote = 60;
-    float pitchWheelSemitones = 0.0f;
-
     bool modalActive = false;
     double modalTime = 0.0;
     static constexpr int maxModes = 8;
     int numActiveModes = 6;
-    double modalFreq[maxModes] {};
-    double modalPhase[maxModes] {};
-    double modalAmp[maxModes] {};
-    double modalDecay[maxModes] {};
+    double modalFreq[maxModes] {}, modalPhase[maxModes] {},
+           modalAmp[maxModes] {}, modalDecay[maxModes] {};
 
     void initModal (int noteNumber);
     void updateFilters (double sr);
@@ -116,19 +101,17 @@ struct GeneratedVariation
     juce::MidiMessageSequence melodySeq;
     juce::MidiMessageSequence chordSeq;
     juce::MidiMessageSequence bassSeq;
-    juce::String moodTag;
-    juce::String genreTag;
+    juce::String moodTag, genreTag;
     double bpm = 140.0;
     int rootNote = 48;
     int bars = 4;
 };
 
 //==============================================================================
-// Dark instrument preset definition.
 struct DarkInstrumentDef
 {
     const char* name;
-    const char* category;   // MELODY / CHORD / BASS / PERC
+    const char* category;
     int numPartials;
     double ratios[8];
     double amps[8];
@@ -136,8 +119,7 @@ struct DarkInstrumentDef
     float noiseAmount;
     float driveAmount;
     int lowNote, highNote;
-    float attack, decay, sustain, release;
-    float cutoff;
+    float attack, decay, sustain, release, cutoff;
 };
 
 //==============================================================================
@@ -149,7 +131,7 @@ public:
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
-    bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+    bool isBusesLayoutSupported (const BusesLayout&) const override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -166,8 +148,8 @@ public:
     const juce::String getProgramName (int) override { return {}; }
     void changeProgramName (int, const juce::String&) override {}
 
-    void getStateInformation (juce::MemoryBlock& destData) override;
-    void setStateInformation (const void* data, int sizeInBytes) override;
+    void getStateInformation (juce::MemoryBlock&) override;
+    void setStateInformation (const void*, int) override;
 
     //==========================================================================
     void generateVariations();
@@ -185,10 +167,9 @@ public:
 
     void setXYPad (float x, float y);
 
-    // Dark-only generation settings
     std::atomic<int> selectedKey   { 0 };
-    std::atomic<int> selectedMood  { 0 };   // 0=Dark 1=Haunting 2=Sinister 3=Eerie
-    std::atomic<int> selectedGenre { 0 };   // 0=Trap 1=Drill 2=Plugg 3=Ambient
+    std::atomic<int> selectedMood  { 0 };
+    std::atomic<int> selectedGenre { 0 };
 
     std::atomic<float> layer0Vol { 1.0f };
     std::atomic<float> layer1Vol { 1.0f };
@@ -209,17 +190,10 @@ private:
     juce::AudioFormatManager formatManager;
     juce::Reverb reverb;
 
-    juce::AudioBuffer<float> delayBuffer;
-    int delayWritePos = 0;
-    juce::AudioBuffer<float> chorusBuffer;
-    int chorusWritePos = 0;
-    float chorusPhase = 0.0f;
-    juce::AudioBuffer<float> flangerBuffer;
-    int flangerWritePos = 0;
-    float flangerPhase = 0.0f;
-    juce::AudioBuffer<float> halfSpeedBuffer;
-    int halfSpeedWritePos = 0;
-    double halfSpeedReadPos = 0.0;
+    juce::AudioBuffer<float> delayBuffer;      int delayWritePos = 0;
+    juce::AudioBuffer<float> chorusBuffer;     int chorusWritePos = 0; float chorusPhase = 0.0f;
+    juce::AudioBuffer<float> flangerBuffer;    int flangerWritePos = 0; float flangerPhase = 0.0f;
+    juce::AudioBuffer<float> halfSpeedBuffer;  int halfSpeedWritePos = 0; double halfSpeedReadPos = 0.0;
 
     std::vector<GeneratedVariation> variations;
     int currentVariationIndex = 0;
